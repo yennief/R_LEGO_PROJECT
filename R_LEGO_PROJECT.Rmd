@@ -2,21 +2,30 @@
 title: "R_LEGO_PROJECT"
 author: "Justyna"
 date: "2023-12-04"
-output: html_document
+output:
+  html_document: 
+    toc: yes
+    toc_float: yes
+    theme: readable
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(ggsci)
+library(shiny)
+library(plotly)
+library(flexdashboard)
 ```
 
-## R Markdown
+```{r load_data echo=FALSE}
+read_files
+```
+## R Executive summary
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r summary}
+head()
 ```
 
 ## Including Plots
