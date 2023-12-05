@@ -1,6 +1,6 @@
 ---
 title: "R_LEGO_PROJECT"
-author: "Justyna"
+author: "Justyna Frączek"
 date: "2023-12-04"
 output:
   html_document: 
@@ -17,12 +17,14 @@ library(ggsci)
 library(shiny)
 library(plotly)
 library(flexdashboard)
+library(tidyverse)
+library(readr)
 ```
 
 ```{r load_data, echo=FALSE}
 
 load_csv_gz_data <- function(file_path) {
-    data <- read.csv(gzfile(file_path))
+    data <- read.csv(file_path)
   return(data)
 }
 
@@ -40,22 +42,211 @@ sets <-load_csv_gz_data("rebrickable/sets.csv.gz")
 themes <- load_csv_gz_data("rebrickable/themes.csv.gz")
 
 ```
+
+```{r remove_missing_data, echo=FALSE}
+remove_null <- function(data) {
+  data_without_missing_vals <- na.omit(data)
+  return(data_without_missing_vals)
+}
+
+```
 ## R Executive summary
 
-```{r summary}
+```{r summary, echo=FALSE}
 
-head(colors)
-head(elements)
-head(inventories)
-head(inventory_minifigs)
-head(inventory_parts)
-head(inventory_sets)
-head(minifigs)
-head(part_categories)
-head(part_relationships)
-head(parts)
-head(sets)
-head(themes)
+#head(colors)
+#head(elements)
+#head(inventories)
+#head(inventory_minifigs)
+#head(inventory_parts)
+#head(inventory_sets)
+#head(minifigs)
+#head(part_categories)
+#head(part_relationships)
+#head(parts)
+#head(sets)
+#head(themes)
+
+colors_no_null <- remove_null(colors)
+elements_no_null <- remove_null(elements)
+inventories_no_null <- remove_null(inventories)
+inventory_minifigs_no_null <- remove_null(inventory_minifigs)
+inventory_parts_no_null <- remove_null(inventory_parts)
+inventory_sets_no_null <- remove_null(inventory_sets)
+minifigs_no_null <- remove_null(minifigs)
+part_categories_no_null <- remove_null(part_categories)
+part_relationships_no_null <- remove_null(part_relationships)
+parts_no_null <- remove_null(parts)
+sets_no_null <- remove_null(sets)
+themes_no_null <- remove_null(themes)
+
+head(colors_no_null)
+head(elements_no_null)
+head(inventories_no_null)
+head(inventory_minifigs_no_null)
+head(inventory_parts_no_null)
+head(inventory_sets_no_null)
+head(minifigs_no_null)
+head(part_categories_no_null)
+head(part_relationships_no_null)
+head(parts_no_null)
+head(sets_no_null)
+head(themes_no_null)
 
 ```
 
+## Basic statistics
+
+### Sizes and basic statistics of data sets after removing null values: 
+
+#### Colors dataset:
+
+``` {r colors, echo=FALSE}
+dim(colors_no_null)
+summary(colors_no_null)
+```
+
+#### Elements dataset:
+
+``` {r elements, echo=FALSE}
+dim(elements_no_null)
+summary(elements_no_null)
+```
+
+#### Inventories dataset:
+
+``` {r inventories, echo=FALSE}
+dim(inventories_no_null)
+summary(inventories_no_null)
+```
+
+#### Inventory minifigs dataset:
+
+``` {r inventory_minifigs, echo=FALSE}
+dim(inventory_minifigs_no_null)
+summary(inventory_minifigs_no_null)
+```
+
+#### Inventory parts dataset:
+
+``` {r inventory_parts, echo=FALSE}
+dim(inventory_parts_no_null)
+summary(inventory_parts_no_null)
+```
+
+#### Inventory sets dataset:
+
+``` {r inventory_sets, echo=FALSE}
+dim(inventory_sets_no_null)
+summary(inventory_sets_no_null)
+```
+
+#### Minifigs dataset:
+
+``` {r minifigs, echo=FALSE}
+dim(minifigs_no_null)
+summary(minifigs_no_null)
+```
+
+#### Part categories dataset:
+
+``` {r part_categories, echo=FALSE}
+dim(part_categories_no_null)
+summary(part_categories_no_null)
+```
+
+#### Part relationships dataset:
+
+``` {r part_relationships, echo=FALSE}
+dim(part_relationships_no_null)
+summary(part_relationships_no_null)
+```
+
+#### Parts dataset:
+
+``` {r parts, echo=FALSE}
+dim(parts_no_null)
+summary(parts_no_null)
+```
+
+#### Sets dataset:
+
+``` {r sets, echo=FALSE}
+dim(sets_no_null)
+summary(sets_no_null)
+```
+
+#### Themes dataset:
+
+``` {r themes, echo=FALSE}
+dim(themes_no_null)
+summary(themes_no_null)
+```
+
+## Attributes analysis
+
+### Top 10 years with most sets released based on inventory sets quantity
+
+``` {r top_sets, echo=FALSE}
+inner_merged_data <- merge(sets_no_null, inventory_sets_no_null, by = "set_num")
+
+yearly_total_quantity <- inner_merged_data %>% 
+  group_by(year) %>% 
+  summarise(TotalQuantity = sum(quantity))
+  
+top_10_years <- yearly_total_quantity %>%
+  top_n(10, TotalQuantity) %>%
+  arrange(desc(TotalQuantity))
+
+
+ggplot(top_10_years, aes(x = as.factor(year), y = TotalQuantity, fill = year)) +
+  geom_bar(stat = "identity", alpha = 0.7) +
+  theme_minimal() +
+  labs(x = "Year", y = "Number of Sets Released") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+
+
+```
+
+### Most common theme for each of these 10 years based on inventory sets quantity
+
+``` {r theme_quantity, echo=FALSE}
+
+merged_themes <- merge(sets_no_null, themes_no_null, by.x = "theme_id", by.y = "id")
+merged_data <- merge(merged_themes, inventory_sets_no_null, by = "set_num")
+#head(merged_data)
+
+#move to top
+top_10_years_with_the_most_sets <- inner_merged_data %>%
+  group_by(year) %>% 
+  summarise(TotalQuantity = sum(quantity)) %>%
+  top_n(10, TotalQuantity) %>%
+  arrange(desc(TotalQuantity)) %>%
+  pull(year)
+
+
+years_with_most_sets <- merged_data %>%
+  filter(year %in% top_10_years_with_the_most_sets)
+
+most_common_themes_in_each_year <- years_with_most_sets %>%
+  group_by(year, name.y) %>%
+  summarise(TotalQuantity = sum(quantity)) %>%
+  group_by(year) %>%
+  filter(TotalQuantity == max(TotalQuantity)) 
+
+ggplot(most_common_themes_in_each_year, aes(x = factor(year), y = TotalQuantity, fill = name.y)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Year", y = "Number of sets' themes in each year") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+## Variables corellations
+
+``` {r inventory_parts_correlation, echo=FALSE}
+
+```
+## Summary the most important trends
+
+## Prediction of future Lego trends
