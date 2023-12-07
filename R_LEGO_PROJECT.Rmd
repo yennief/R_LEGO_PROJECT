@@ -19,9 +19,13 @@ library(plotly)
 library(flexdashboard)
 library(tidyverse)
 library(readr)
+library(corrplot)
+library(dplyr)
+library(tidyr)
+library(prophet)
 ```
 
-```{r load_data, echo=FALSE}
+```{r load_data, echo=FALSE, cache=TRUE}
 
 load_csv_gz_data <- function(file_path) {
     data <- read.csv(file_path)
@@ -43,30 +47,26 @@ themes <- load_csv_gz_data("rebrickable/themes.csv.gz")
 
 ```
 
-```{r remove_missing_data, echo=FALSE}
+```{r remove_missing_data, echo=FALSE, cache=TRUE}
 remove_null <- function(data) {
   data_without_missing_vals <- na.omit(data)
   return(data_without_missing_vals)
 }
 
 ```
+
+
+```{r yearly_sets_total_quantity, echo=FALSE, cache=TRUE}
+yearly_sets_total_quantity <- function(data) {
+  yearly_total_quantity <- data %>% 
+  group_by(year) %>% 
+  summarise(TotalQuantity = sum(quantity))
+}
+
+```
 ## R Executive summary
 
-```{r summary, echo=FALSE}
-
-#head(colors)
-#head(elements)
-#head(inventories)
-#head(inventory_minifigs)
-#head(inventory_parts)
-#head(inventory_sets)
-#head(minifigs)
-#head(part_categories)
-#head(part_relationships)
-#head(parts)
-#head(sets)
-#head(themes)
-
+```{r remove_null_vals, echo=FALSE, cache=TRUE}
 colors_no_null <- remove_null(colors)
 elements_no_null <- remove_null(elements)
 inventories_no_null <- remove_null(inventories)
@@ -80,19 +80,6 @@ parts_no_null <- remove_null(parts)
 sets_no_null <- remove_null(sets)
 themes_no_null <- remove_null(themes)
 
-head(colors_no_null)
-head(elements_no_null)
-head(inventories_no_null)
-head(inventory_minifigs_no_null)
-head(inventory_parts_no_null)
-head(inventory_sets_no_null)
-head(minifigs_no_null)
-head(part_categories_no_null)
-head(part_relationships_no_null)
-head(parts_no_null)
-head(sets_no_null)
-head(themes_no_null)
-
 ```
 
 ## Basic statistics
@@ -101,84 +88,84 @@ head(themes_no_null)
 
 #### Colors dataset:
 
-``` {r colors, echo=FALSE}
+``` {r colors, echo=FALSE, cache=TRUE}
 dim(colors_no_null)
 summary(colors_no_null)
 ```
 
 #### Elements dataset:
 
-``` {r elements, echo=FALSE}
+``` {r elements, echo=FALSE, cache=TRUE}
 dim(elements_no_null)
 summary(elements_no_null)
 ```
 
 #### Inventories dataset:
 
-``` {r inventories, echo=FALSE}
+``` {r inventories, echo=FALSE, cache=TRUE}
 dim(inventories_no_null)
 summary(inventories_no_null)
 ```
 
 #### Inventory minifigs dataset:
 
-``` {r inventory_minifigs, echo=FALSE}
+``` {r inventory_minifigs, echo=FALSE, cache=TRUE}
 dim(inventory_minifigs_no_null)
 summary(inventory_minifigs_no_null)
 ```
 
 #### Inventory parts dataset:
 
-``` {r inventory_parts, echo=FALSE}
+``` {r inventory_parts, echo=FALSE, cache=TRUE}
 dim(inventory_parts_no_null)
 summary(inventory_parts_no_null)
 ```
 
 #### Inventory sets dataset:
 
-``` {r inventory_sets, echo=FALSE}
+``` {r inventory_sets, echo=FALSE, cache=TRUE}
 dim(inventory_sets_no_null)
 summary(inventory_sets_no_null)
 ```
 
 #### Minifigs dataset:
 
-``` {r minifigs, echo=FALSE}
+``` {r minifigs, echo=FALSE, cache=TRUE}
 dim(minifigs_no_null)
 summary(minifigs_no_null)
 ```
 
 #### Part categories dataset:
 
-``` {r part_categories, echo=FALSE}
+``` {r part_categories, echo=FALSE, cache=TRUE}
 dim(part_categories_no_null)
 summary(part_categories_no_null)
 ```
 
 #### Part relationships dataset:
 
-``` {r part_relationships, echo=FALSE}
+``` {r part_relationships, echo=FALSE, cache=TRUE}
 dim(part_relationships_no_null)
 summary(part_relationships_no_null)
 ```
 
 #### Parts dataset:
 
-``` {r parts, echo=FALSE}
+``` {r parts, echo=FALSE, cache=TRUE}
 dim(parts_no_null)
 summary(parts_no_null)
 ```
 
 #### Sets dataset:
 
-``` {r sets, echo=FALSE}
+``` {r sets, echo=FALSE, cache=TRUE}
 dim(sets_no_null)
 summary(sets_no_null)
 ```
 
 #### Themes dataset:
 
-``` {r themes, echo=FALSE}
+``` {r themes, echo=FALSE, cache=TRUE}
 dim(themes_no_null)
 summary(themes_no_null)
 ```
@@ -187,12 +174,10 @@ summary(themes_no_null)
 
 ### Top 10 years with most sets released based on inventory sets quantity
 
-``` {r top_sets, echo=FALSE}
+``` {r top_sets, echo=FALSE, cache=TRUE}
 inner_merged_data <- merge(sets_no_null, inventory_sets_no_null, by = "set_num")
 
-yearly_total_quantity <- inner_merged_data %>% 
-  group_by(year) %>% 
-  summarise(TotalQuantity = sum(quantity))
+yearly_total_quantity <- yearly_sets_total_quantity(inner_merged_data)
   
 top_10_years <- yearly_total_quantity %>%
   top_n(10, TotalQuantity) %>%
@@ -208,18 +193,16 @@ ggplot(top_10_years, aes(x = as.factor(year), y = TotalQuantity, fill = year)) +
 
 ```
 
-### Most common theme for each of these 10 years based on inventory sets quantity
+### Most popular themes based on the number of sets released during these 10 years
 
-``` {r theme_quantity, echo=FALSE}
+``` {r theme_quantity, echo=FALSE, cache=TRUE}
 
 merged_themes <- merge(sets_no_null, themes_no_null, by.x = "theme_id", by.y = "id")
 merged_data <- merge(merged_themes, inventory_sets_no_null, by = "set_num")
 #head(merged_data)
 
-#move to top
-top_10_years_with_the_most_sets <- inner_merged_data %>%
-  group_by(year) %>% 
-  summarise(TotalQuantity = sum(quantity)) %>%
+
+top_10_years_with_the_most_sets <- yearly_total_quantity %>%
   top_n(10, TotalQuantity) %>%
   arrange(desc(TotalQuantity)) %>%
   pull(year)
@@ -234,19 +217,239 @@ most_common_themes_in_each_year <- years_with_most_sets %>%
   group_by(year) %>%
   filter(TotalQuantity == max(TotalQuantity)) 
 
+get_themes <- most_common_themes_in_each_year %>% pull(name.y)
+
 ggplot(most_common_themes_in_each_year, aes(x = factor(year), y = TotalQuantity, fill = name.y)) +
   geom_bar(stat = "identity") +
-  labs(x = "Year", y = "Number of sets' themes in each year") +
+  labs(x = "Year", y = "Number of sets with theme") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
 
-## Variables corellations
+### Most popular colors of elements for these themes
 
-``` {r inventory_parts_correlation, echo=FALSE}
+``` {r themes_color_quantity, echo=FALSE, cache=TRUE}
+
+color_usage <- inventory_parts_no_null %>%
+ inner_join(colors_no_null, c("color_id" = "id")) %>%
+ inner_join(inventories_no_null, c("inventory_id" = "id")) %>%
+ inner_join(sets_no_null, by = "set_num") %>%
+ inner_join(themes_no_null, c("theme_id" = "id"))
+
+themes_with_most_sets <- color_usage %>%
+  filter(name %in% get_themes)
+
+color_theme_usage <- themes_with_most_sets %>%
+  group_by(name) %>%
+  count(name.x) %>%
+  top_n(1) %>%  
+  ungroup() %>%
+  select(name, n, name.x) %>%
+  arrange(desc(n)) 
+
+ggplot(color_theme_usage, aes(x = factor(name), y = n, fill = name.x)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Theme name", y = "Number of elements in color") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 
 ```
+
+### 10 most popular colors of elements in general
+
+``` {r color_quantity, echo=FALSE, cache=TRUE}
+
+color_usage <- inventory_parts_no_null %>%
+ inner_join(colors_no_null, c("color_id" = "id"))
+
+color_count <- color_usage %>%
+  group_by(name, rgb) %>%
+  summarize(num_parts = n()) %>%
+  arrange(desc(num_parts)) %>%
+  head(n = 10)
+
+ggplot(color_count, aes(x = factor(name), y = num_parts, fill = name)) +
+ geom_bar(stat = "identity") +
+ labs(x = "Color name", y = "Number of elements in color") + 
+  theme_minimal() +
+theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+```
+
+### Color variety in sets over the years
+
+``` {r color_variety, echo=FALSE, cache=TRUE}
+
+set_colors_data <- sets_no_null %>%
+  inner_join(inventories_no_null, by="set_num") %>%
+  inner_join(inventory_parts_no_null, by = c("id" = "inventory_id")) %>%
+  inner_join(colors_no_null, by = c("color_id" = "id"))
+
+set_colors_data$year <- as.numeric(as.character(set_colors_data$year))
+
+color_variety_per_year <- set_colors_data %>%
+  group_by(year, set_num) %>%
+  summarize(unique_colors = n_distinct(color_id), .groups = 'drop') %>%
+  group_by(year) %>%
+  summarize(average_unique_colors = mean(unique_colors, na.rm = TRUE), .groups = 'drop')
+
+ggplot(color_variety_per_year, aes(x = year, y = average_unique_colors)) +
+  geom_line(color = "coral", linewidth = 1) +
+  geom_point(color = "darkred") +
+  labs(title = "Average Unique Colors per Lego Set Over Time",
+       x = "Year",
+       y = "Average Unique Colors") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+Conclusions:
+  
+The plot shows a clear upward trend in the average number of unique colors used in Lego sets from around the 1950s to the present. Notably, there is a significant increase starting in the early 2000s, where the average number of unique colors per set rises more steeply compared to previous decades.
+
+This trend could be indicative of Lego's strategy to make sets more appealing and varied, perhaps in response to market demands for more intricate and visually stimulating products.
+
+### Distribution of the number of minifigs in set - 10 sets with most minifigures
+
+```{r minifigs_in_set, echo=FALSE}
+sets_inventories_data <- merge(sets_no_null, inventories_no_null, by = "set_num")
+inventories_inventory_minifigs_data <- merge(sets_inventories_data, inventory_minifigs_no_null, by.x = "id", by.y = "inventory_id")
+
+minifigs_data <- merge(inventories_inventory_minifigs_data, minifigs_no_null, by = "fig_num")
+
+minifigs_count_per_set <- minifigs_data %>%
+  group_by(name.x) %>%
+  summarize(num_minifigs = n()) %>%
+  arrange(desc(num_minifigs)) %>%
+  head(n = 10)
+
+ggplot(minifigs_count_per_set, aes(x = factor(name.x), y = num_minifigs, fill = name.x)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Set name", y = "Number of minifigs") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### Number of minifigures included per set over time
+
+```{r minifigs_in_set_over_timw, echo=FALSE}
+
+minifigs_per_set_theme <- minifigs_data %>%
+ group_by(year, set_num) %>%
+ summarize(total_minifigs = n_distinct(fig_num), .groups = 'drop') %>%
+ ungroup()
+
+minifigs_trend <- minifigs_per_set_theme %>%
+  group_by(year) %>%
+  summarize(average_minifigs = mean(total_minifigs, na.rm = TRUE), .groups = 'drop')
+
+ggplot(minifigs_trend, aes(x = year, y = average_minifigs)) +
+  geom_line(color = "dodgerblue") +
+  geom_point(color = "darkorange") +
+  labs(title = "Trend of Average Number of Minifigures per Lego Set Over Time",
+       x = "Year",
+       y = "Average Number of Minifigures") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+```
+
+Conclusions:
+
+There are distinct spikes observed in certain years, which could indicate special editions or series of sets that included more minifigures, or perhaps a general increase in the inclusion of minifigures in sets during those times. Following each spike, there is often a drop, which may suggest a return to the norm. 
+
+After 2010, there appears to be a downward trend, suggesting that recent sets might be including fewer minifigures on average.
+
+## Variables corellations
+
+
+### Correlation between size of a set and number of colors in a set
+``` {r size_colors, echo=FALSE}
+
+sets_colors <- sets_no_null %>%
+  left_join(inventories_no_null, by = "set_num") %>%
+  left_join(inventory_parts_no_null, by = c("id" = "inventory_id")) %>%
+  group_by(set_num) %>%
+  summarize(num_parts = sum(num_parts), num_colors = n_distinct(color_id)) %>%
+  ungroup()
+
+# Calculate the correlation matrix
+cor_matrix <- cor(sets_colors[, c("num_parts", "num_colors")], use = "complete.obs")
+
+# Plot the correlation matrix
+corrplot(cor_matrix, method = "circle")
+
+```
+
+Conclusion:
+
+The heatmap suggests that there is a positive correlation between the size of a Lego set (as measured by the number of parts) and the color diversity within the set (as measured by the number of unique colors). Sets that have a higher number of parts tend also to have a higher number of different colors.
+
+### Correlation between the number of parts in a set and the complexity of a set
+
+Complexity of a set can be achieved by approximate the number of unique part categories used in each set.
+
+``` {r parts_complexity, echo=FALSE}
+
+sets_parts <- sets_no_null %>%
+  inner_join(inventories_no_null, by = "set_num") %>%
+  inner_join(inventory_parts_no_null, by = c("id" = "inventory_id")) %>%
+  inner_join(parts_no_null, by = "part_num")
+
+category_complexity <- sets_parts %>%
+  group_by(set_num) %>%
+  summarize(num_unique_categories = n_distinct(part_cat_id), .groups = 'drop')
+
+sets_complexity <- sets_no_null %>%
+  inner_join(category_complexity, by = "set_num")
+
+correlation_matrix <- cor(sets_complexity$num_parts, sets_complexity$num_unique_categories, use = "complete.obs")
+
+ggplot(sets_complexity, aes(x = num_parts, y = num_unique_categories)) +
+  geom_point() +
+  geom_smooth(method = "lm", col = "blue") +
+  labs(title = "Correlation between Number of Parts and Complexity",
+       x = "Number of Parts",
+       y = "Number of Unique Categories")
+
+print(correlation_matrix)
+
+```
+
+Conclusion:
+
+The scatter plot reveals a positive correlation between the number of parts and set complexity. As the number of parts in a set increases, the number of unique part categories tends to increase as well, suggesting that larger sets are generally more complex. This relationship seems to hold strongly for sets with a smaller number of parts, as indicated by the dense cluster of points toward the origin, where the increase in complexity with the number of parts is quite pronounced.
+
+For sets with a very high number of parts (toward the right end of the X-axis), the data points become more spread out, indicating more variability in complexity for these larger sets. It suggests that once a set reaches a certain size, the addition of more parts does not necessarily increase complexity at the same rate. This could be due to the use of repeated parts within these large sets or a design choice to not increase complexity despite a higher part count.
 ## Summary the most important trends
 
 ## Prediction of future Lego trends
+
+I will use Prophet ML model to predict the number of released sets from the current year up to 2030.
+
+``` {r future_prediction, echo=FALSE}
+
+prophet_data <- yearly_total_quantity %>%
+  mutate(ds = as.Date(paste(year, "-01-01", sep="")), y = TotalQuantity)
+
+m <- prophet(prophet_data)
+
+future <- make_future_dataframe(m, periods = 10, freq = "year")
+
+forecast <- predict(m, future)
+
+plot(m, forecast)
+
+tail(forecast[c('ds', 'yhat', 'yhat_lower', 'yhat_upper')], 10)
+```
+
+Conclusion:
+
+The prediction suggests a continued increase in the number of Lego sets released each year. 
+
+If the trend observed in the past continues without significant change, we might expect to see a rise in the number of Lego sets released annually up to 2030. However, predictions should be taken with caution due to the potential impact of unforeseen future events.
