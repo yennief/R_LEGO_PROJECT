@@ -12,3 +12,7 @@ dplyr
 stringr
 forcats
 lubridate
+corrplot
+Rcpp
+rlang
+prophet

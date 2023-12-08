@@ -66,6 +66,23 @@ yearly_sets_total_quantity <- function(data) {
 ```
 ## R Executive summary
 
+This comprehensive analysis examines the temporal evolution of LEGO set releases, exploring various dimensions such as set count, themes popularity, color variety, and complexity. The analysis utilizes data spanning several decades, emphasizing trends and fluctuations in the LEGO product strategy.
+
+The LEGO Group has significantly increased the number of set releases per year since 2000, with notable market responsiveness observed during the COVID-19 pandemic, as seen in the peaks of 2020 and 2021.
+
+The analysis identifies a surge in product diversity, highlighted by the growing number of unique colors per set, indicating a strategic pivot towards more visually engaging and complex offerings.
+
+Thematic trends reveal that certain series, such as DC Super Heroes and various Minifigures series, dominate release counts, reflecting both sustained popularity and strategic brand partnerships.
+
+An examination of the most popular colors shows a dominance of traditional colors, with black and white leading, suggesting these colors' foundational roles in set design.
+
+The correlation between set size and color variety is positive, indicating that larger sets tend to offer a greater spectrum of colors, adding to their complexity and appeal.
+
+Despite the increase in set complexity, as indicated by the number of unique parts, there is a noted decline in the average number of minifigures included per set in recent years, suggesting a shift in focus or a response to changing consumer preferences.
+
+
+## Basic statistics
+
 ```{r remove_null_vals, echo=FALSE, cache=TRUE}
 colors_no_null <- remove_null(colors)
 elements_no_null <- remove_null(elements)
@@ -81,8 +98,6 @@ sets_no_null <- remove_null(sets)
 themes_no_null <- remove_null(themes)
 
 ```
-
-## Basic statistics
 
 ### Sizes and basic statistics of data sets after removing null values: 
 
@@ -172,17 +187,50 @@ summary(themes_no_null)
 
 ## Attributes analysis
 
-### Top 10 years with most sets released based on inventory sets quantity
 
-``` {r top_sets, echo=FALSE, cache=TRUE}
+### Number of sets released over years based on inventory sets quantity
+
+```{r sets_slider, echo=FALSE, cache=TRUE}
 inner_merged_data <- merge(sets_no_null, inventory_sets_no_null, by = "set_num")
 
 yearly_total_quantity <- yearly_sets_total_quantity(inner_merged_data)
+
+p <- plot_ly(yearly_total_quantity, x = ~year, y = ~TotalQuantity, type = 'scatter', mode = 'lines+markers') %>%
+  layout(
+    title = "Number of Sets Released Over Years",
+    xaxis = list(
+      title = "Year",
+      rangeselector = list(
+        buttons = list(
+          list(count = 5, label = "5y", step = "year", stepmode = "backward"),
+          list(count = 10, label = "10y", step = "year", stepmode = "backward"),
+          list(count = 20, label = "20y", step = "year", stepmode = "backward"),
+          list(step = "all", label = "All")
+        )
+      ),
+      rangeslider = list(type = "date")
+    ),
+    yaxis = list(title = "Number of Sets")
+  )
+
+p
+
+```
+
+Conclusions:
+
+We can observe a rapid increase in the number of sets released after 2000. The graph shows that the release frequency became more volatile, with significant peaks and troughs.
+
+In the most recent years displayed on the graph, there is a notable fluctuation with sharp increases in the number of sets followed by declines. This could be due to various factors such as market strategy, changes driven by COVID-19 pandemic, where we can see a decent increase of sets in 2020 and 2021 years.
+
+### Top 10 years with most sets released based on inventory sets quantity
+
+``` {r top_sets, echo=FALSE, cache=TRUE}
+
   
 top_10_years <- yearly_total_quantity %>%
   top_n(10, TotalQuantity) %>%
   arrange(desc(TotalQuantity))
-
 
 ggplot(top_10_years, aes(x = as.factor(year), y = TotalQuantity, fill = year)) +
   geom_bar(stat = "identity", alpha = 0.7) +
@@ -338,23 +386,23 @@ ggplot(minifigs_count_per_set, aes(x = factor(name.x), y = num_minifigs, fill = 
 
 ```{r minifigs_in_set_over_timw, echo=FALSE}
 
-minifigs_per_set_theme <- minifigs_data %>%
+minifigs_per_set_year <- minifigs_data %>%
  group_by(year, set_num) %>%
  summarize(total_minifigs = n_distinct(fig_num), .groups = 'drop') %>%
  ungroup()
 
-minifigs_trend <- minifigs_per_set_theme %>%
+minifigs_trend <- minifigs_per_set_year %>%
   group_by(year) %>%
   summarize(average_minifigs = mean(total_minifigs, na.rm = TRUE), .groups = 'drop')
 
-ggplot(minifigs_trend, aes(x = year, y = average_minifigs)) +
-  geom_line(color = "dodgerblue") +
-  geom_point(color = "darkorange") +
-  labs(title = "Trend of Average Number of Minifigures per Lego Set Over Time",
-       x = "Year",
-       y = "Average Number of Minifigures") +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
+fig <- plot_ly(minifigs_trend, x = ~year, y = ~average_minifigs, type = 'scatter', mode = 'lines+markers',
+               hoverinfo = 'y+text', text = ~paste("Year:", year, "<br>Avg. Minifigs:", average_minifigs))
+
+
+fig <- fig %>% layout(title = 'Average Number of Minifigures per Set Over Time',
+                      xaxis = list(title = 'Year'),
+                      yaxis = list(title = 'Average Number of Minifigures'))
+fig
 
 
 ```
@@ -364,6 +412,7 @@ Conclusions:
 There are distinct spikes observed in certain years, which could indicate special editions or series of sets that included more minifigures, or perhaps a general increase in the inclusion of minifigures in sets during those times. Following each spike, there is often a drop, which may suggest a return to the norm. 
 
 After 2010, there appears to be a downward trend, suggesting that recent sets might be including fewer minifigures on average.
+
 
 ## Variables corellations
 
@@ -426,7 +475,30 @@ Conclusion:
 The scatter plot reveals a positive correlation between the number of parts and set complexity. As the number of parts in a set increases, the number of unique part categories tends to increase as well, suggesting that larger sets are generally more complex. This relationship seems to hold strongly for sets with a smaller number of parts, as indicated by the dense cluster of points toward the origin, where the increase in complexity with the number of parts is quite pronounced.
 
 For sets with a very high number of parts (toward the right end of the X-axis), the data points become more spread out, indicating more variability in complexity for these larger sets. It suggests that once a set reaches a certain size, the addition of more parts does not necessarily increase complexity at the same rate. This could be due to the use of repeated parts within these large sets or a design choice to not increase complexity despite a higher part count.
+
+
 ## Summary the most important trends
+
+Over the years, the LEGO Group has navigated through various market trends and consumer preferences, as evidenced by the evolution of its set designs. The data shows an overall trend towards increased complexity and diversity in set offerings, which can be attributed to the following key developments:
+
+### Innovation in Color and Complexity: 
+
+There has been a clear trajectory towards incorporating a broader palette of colors in sets, coupled with an increase in the number of parts.
+
+### Thematic Adaptability: 
+
+LEGO has shown adaptability in its themes, often aligning with popular culture and consumer interests, as seen in the consistent popularity of certain minifigure series and licensed themes.
+
+### Market Responsiveness: 
+
+Fluctuations in set releases correlate with global events, such as the pandemic, where LEGO appeared to capitalize on increased demand for indoor activities, as well as adjust its product strategy in response to the economic climate.
+
+### Consumer Engagement: 
+
+The changing number of minifigures and the variability in sets suggest a strategic focus on consumer engagement, offering a mix of both collector-focused and play-intensive sets.
+
+
+In conclusion, LEGO's ability to evolve while retaining its core principles has allowed it to remain a leader in the toy industry, consistently delivering products that resonate with consumers of all ages.
 
 ## Prediction of future Lego trends
 
