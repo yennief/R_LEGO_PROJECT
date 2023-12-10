@@ -78,9 +78,6 @@ An examination of the most popular colors shows a dominance of traditional color
 
 The correlation between set size and color variety is positive, indicating that larger sets tend to offer a greater spectrum of colors, adding to their complexity and appeal.
 
-Despite the increase in set complexity, as indicated by the number of unique parts, there is a noted decline in the average number of minifigures included per set in recent years, suggesting a shift in focus or a response to changing consumer preferences.
-
-
 ## Basic statistics
 
 ```{r remove_null_vals, echo=FALSE, cache=TRUE}
@@ -103,12 +100,16 @@ themes_no_null <- remove_null(themes)
 
 #### Colors dataset:
 
+Dataset size: 
+
 ``` {r colors, echo=FALSE, cache=TRUE}
 dim(colors_no_null)
 summary(colors_no_null)
 ```
 
 #### Elements dataset:
+
+Dataset size: 
 
 ``` {r elements, echo=FALSE, cache=TRUE}
 dim(elements_no_null)
@@ -117,12 +118,16 @@ summary(elements_no_null)
 
 #### Inventories dataset:
 
+Dataset size: 
+
 ``` {r inventories, echo=FALSE, cache=TRUE}
 dim(inventories_no_null)
 summary(inventories_no_null)
 ```
 
 #### Inventory minifigs dataset:
+
+Dataset size: 
 
 ``` {r inventory_minifigs, echo=FALSE, cache=TRUE}
 dim(inventory_minifigs_no_null)
@@ -131,6 +136,8 @@ summary(inventory_minifigs_no_null)
 
 #### Inventory parts dataset:
 
+Dataset size: 
+
 ``` {r inventory_parts, echo=FALSE, cache=TRUE}
 dim(inventory_parts_no_null)
 summary(inventory_parts_no_null)
@@ -138,12 +145,15 @@ summary(inventory_parts_no_null)
 
 #### Inventory sets dataset:
 
+Dataset size: 
 ``` {r inventory_sets, echo=FALSE, cache=TRUE}
 dim(inventory_sets_no_null)
 summary(inventory_sets_no_null)
 ```
 
 #### Minifigs dataset:
+
+Dataset size: 
 
 ``` {r minifigs, echo=FALSE, cache=TRUE}
 dim(minifigs_no_null)
@@ -152,12 +162,16 @@ summary(minifigs_no_null)
 
 #### Part categories dataset:
 
+Dataset size: 
+
 ``` {r part_categories, echo=FALSE, cache=TRUE}
 dim(part_categories_no_null)
 summary(part_categories_no_null)
 ```
 
 #### Part relationships dataset:
+
+Dataset size: 
 
 ``` {r part_relationships, echo=FALSE, cache=TRUE}
 dim(part_relationships_no_null)
@@ -166,6 +180,8 @@ summary(part_relationships_no_null)
 
 #### Parts dataset:
 
+Dataset size: 
+
 ``` {r parts, echo=FALSE, cache=TRUE}
 dim(parts_no_null)
 summary(parts_no_null)
@@ -173,12 +189,16 @@ summary(parts_no_null)
 
 #### Sets dataset:
 
+Dataset size: 
+
 ``` {r sets, echo=FALSE, cache=TRUE}
 dim(sets_no_null)
 summary(sets_no_null)
 ```
 
 #### Themes dataset:
+
+Dataset size: 
 
 ``` {r themes, echo=FALSE, cache=TRUE}
 dim(themes_no_null)
@@ -362,57 +382,62 @@ This trend could be indicative of Lego's strategy to make sets more appealing an
 
 ### Distribution of the number of minifigs in set - 10 sets with most minifigures
 
-```{r minifigs_in_set, echo=FALSE}
-sets_inventories_data <- merge(sets_no_null, inventories_no_null, by = "set_num")
-inventories_inventory_minifigs_data <- merge(sets_inventories_data, inventory_minifigs_no_null, by.x = "id", by.y = "inventory_id")
+```{r minifigs_in_set2, echo=FALSE}
+inventorysets_inventory_minifigs_data2 <- merge(inventory_sets_no_null, inventory_minifigs_no_null, by = "inventory_id")
 
-minifigs_data <- merge(inventories_inventory_minifigs_data, minifigs_no_null, by = "fig_num")
+inv_inv_mini = left_join(inventories_no_null, inventory_minifigs, by=c("id" = "inventory_id"))
+i2_sets = left_join(inv_inv_mini, sets_no_null, by=c("set_num" = "set_num"))
 
-minifigs_count_per_set <- minifigs_data %>%
-  group_by(name.x) %>%
-  summarize(num_minifigs = n()) %>%
+minifigs_count_per_set2 <- i2_sets %>%
+  group_by(id, set_num) %>%
+  summarize(num_minifigs = n(),name = first(name), .groups = 'drop') %>%
+  distinct(set_num, .keep_all = TRUE) %>%
   arrange(desc(num_minifigs)) %>%
   head(n = 10)
 
-ggplot(minifigs_count_per_set, aes(x = factor(name.x), y = num_minifigs, fill = name.x)) +
+ggplot(minifigs_count_per_set2, aes(x = factor(paste(set_num,name)), y = num_minifigs, fill = name)) +
   geom_bar(stat = "identity") +
   labs(x = "Set name", y = "Number of minifigs") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.margin = margin(t = 30, r = 30, b = 30, l = 30, unit = "pt"))
+
+
+minifigs_count_per_set2
 
 ```
 
 ### Number of minifigures included per set over time
 
-```{r minifigs_in_set_over_timw, echo=FALSE}
+```{r minifigs_in_set_over_time, echo=FALSE}
 
-minifigs_per_set_year <- minifigs_data %>%
- group_by(year, set_num) %>%
- summarize(total_minifigs = n_distinct(fig_num), .groups = 'drop') %>%
- ungroup()
+minifigs_per_set_year <- i2_sets %>%
+  group_by(id, set_num) %>%
+  summarize(num_minifigs = n(), year=first(year), .groups = 'drop') %>%
+  distinct(set_num, .keep_all = TRUE) %>%
+  ungroup()
 
-minifigs_trend <- minifigs_per_set_year %>%
+minifigs_per_set_year <- minifigs_per_set_year %>%
   group_by(year) %>%
-  summarize(average_minifigs = mean(total_minifigs, na.rm = TRUE), .groups = 'drop')
+  summarize(average_minifigs = mean(num_minifigs, na.rm = TRUE), .groups = 'drop')
 
-fig <- plot_ly(minifigs_trend, x = ~year, y = ~average_minifigs, type = 'scatter', mode = 'lines+markers',
-               hoverinfo = 'y+text', text = ~paste("Year:", year, "<br>Avg. Minifigs:", average_minifigs))
-
-
-fig <- fig %>% layout(title = 'Average Number of Minifigures per Set Over Time',
-                      xaxis = list(title = 'Year'),
-                      yaxis = list(title = 'Average Number of Minifigures'))
-fig
-
+ggplot(minifigs_per_set_year, aes(x = year, y = average_minifigs)) +
+  geom_line(color = "coral", linewidth = 1) +
+  geom_point(color = "darkred") +
+  labs(title = "Average number of minifigs per set over years",
+       x = "Year",
+       y = "Average number of minifigs per set") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 ```
 
 Conclusions:
 
-There are distinct spikes observed in certain years, which could indicate special editions or series of sets that included more minifigures, or perhaps a general increase in the inclusion of minifigures in sets during those times. Following each spike, there is often a drop, which may suggest a return to the norm. 
+For a significant period, specifically from the early years displayed up to around the late 1970s, the average number of minifigures per set remained relatively constant and close to 1.
 
-After 2010, there appears to be a downward trend, suggesting that recent sets might be including fewer minifigures on average.
+Starting from the early 1980s, there is noticeable variability, with the average number of minifigures per set fluctuating more significantly. The fluctuations appear to be somewhat cyclical with peaks and troughs.
 
+The trend becomes more pronounced in later years, with the variability increasing, which could be indicative of more diverse set offerings, special editions, or changes in set design philosophy.
 
 ## Variables corellations
 
